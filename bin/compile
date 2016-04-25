@@ -24,22 +24,31 @@ for BUILDPACK in $(cat $1/.buildpacks); do
   fi
 
   if [ "$url" != "" ]; then
-    echo "=====> Downloading Buildpack: $url"
-
-    if [[ "$url" =~ \.tgz$ ]] || [[ "$url" =~ \.tgz\? ]]; then
-      mkdir -p "$dir"
-      curl -s "$url" | tar xvz -C "$dir" >/dev/null 2>&1
+    if [[ ! "$url" =~ [:/@] ]]; then
+        echo "=====> Locating Admin Buildpack: $url"
+        dir=$(echo $CF_BUILDPACKS | jq -r ".[] | select(.name == \"$url\") | .path")
+        if [ -z $dir ]; then
+            echo "       Buildpack not found in CF_BUILDPACKS"
+            continue
+        fi
     else
-      git clone $url $dir >/dev/null 2>&1
-    fi
-    cd $dir
+      echo "=====> Downloading Buildpack: $url"
 
-    if [ "$branch" != "" ]; then
-      git checkout $branch >/dev/null 2>&1
-    fi
+      if [[ "$url" =~ \.tgz$ ]] || [[ "$url" =~ \.tgz\? ]]; then
+        mkdir -p "$dir"
+        curl -s "$url" | tar xvz -C "$dir" >/dev/null 2>&1
+      else
+        git clone $url $dir >/dev/null 2>&1
+      fi
+      cd $dir
 
-    # we'll get errors later if these are needed and don't exist
-    chmod -f +x $dir/bin/{detect,compile,release} || true
+      if [ "$branch" != "" ]; then
+        git checkout $branch >/dev/null 2>&1
+      fi
+
+      # we'll get errors later if these are needed and don't exist
+      chmod -f +x $dir/bin/{detect,compile,release} || true
+    fi
 
     framework=$($dir/bin/detect $1)
 
