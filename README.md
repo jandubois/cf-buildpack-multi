@@ -2,7 +2,7 @@
 
 This repo contains a proof-of-concept fork of the [Heroku multi buildpack](https://github.com/heroku/heroku-buildpack-multi) with additional support to delegate to CF admin buildpacks.
 
-Admin buildpacks are mapped into the staging container, but it isn't possible to locate them (by name). The cloud controller jealousy guards the mapping between buildpack name and key/guid.
+Admin buildpacks are mapped into the staging container, but it isn't possible to locate them (by name). The cloud controller jealously guards the mapping between buildpack name and key/guid.
 
 This buildpack assumes that the admin buildpack locations will be exposed via an environment variable:
 
@@ -56,6 +56,12 @@ Staging then needs to happen via multiple commands:
 cf push myapp --no-start
 cf set-env myapp CF_BUILDPACKS $(cf_buildpacks)
 cf start myapp
+```
+
+Alternatively you could add `CF_BUILDPACKS` to your "staging environment variable group":
+
+```bash
+cf ssevg "$(cf curl /v2/config/environment_variable_groups/staging | jq '.CF_BUILDPACKS = $bp' --arg bp $(./cf_buildpacks))"
 ```
 
 The required change to the buildpack is quite small if you [ignore whitespace differences](https://github.com/jandubois/cf-buildpack-multi/commit/d24dbc0?w=1).
